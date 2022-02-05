@@ -2,25 +2,28 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gorilla/mux"
 )
 
 type questioncomments struct {
-	CommentID string `json:"commentid"`
-	QuestionID  string `json:"questionid"`
-	Comment   string `json:"comment"`
-	StudentID string `json:"studentid"`
+	CommentID  string `json:"commentid"`
+	QuestionID string `json:"questionid"`
+	Comment    string `json:"comment"`
+	StudentID  string `json:"studentid"`
 }
 type questionratingss struct {
-	QuestionID  string `json:"answerid"`
+	QuestionID     string `json:"answerid"`
 	QuestionRating int    `json:"answerrating"`
 }
 
-func GetComments(db *sql.DB, AnswerID string) answercomments {
-	query := fmt.Sprintf("Select * FROM AnswerComments WHERE AnswerID= '%s'", AnswerID)
+func GetComments(db *sql.DB, QuestionID string) questioncomments {
+	query := fmt.Sprintf("Select * FROM QuestionComments WHERE AnswerID= '%s'", AnswerID)
 	results, err := db.Query(query)
 	if err != nil {
 		panic(err.Error())
