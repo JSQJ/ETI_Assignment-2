@@ -414,7 +414,7 @@ func main() {
 	headers := handlers.AllowedHeaders([]string{"X-REQUESTED-With", "Content-Type"})
 	methods := handlers.AllowedMethods([]string{"GET", "POST", "PUT"})
 	origins := handlers.AllowedOrigins([]string{"*"})
-	router.HandleFunc("/api/v1/Answer/Comments", home)                                              //Test API
+	router.HandleFunc("/api/v1/Answer", home)                                                       //Test API
 	router.HandleFunc("/api/v1/Answer/Comments/{AnswerID}", comments).Methods("GET", "PUT", "POST") //API Manipulation
 	router.HandleFunc("/api/v1/Answer/Ratings/{AnswerID}", ratings).Methods("Get", "PUT")
 	router.HandleFunc("/api/v1/Answer/Ratings/Increase", IncreaseAnswerRatings).Methods("PUT")
