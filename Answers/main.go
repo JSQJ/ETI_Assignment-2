@@ -14,13 +14,13 @@ import (
 )
 
 type answercomments struct {
-	CommentID string `json:"commentid"`
+	CommentID int    `json:"commentid"`
 	AnswerID  string `json:"answerid"`
 	Comment   string `json:"comment"`
 	StudentID string `json:"studentid"`
 }
 type answerratings struct {
-	RatingID  string `json:"ratingid"`
+	RatingID  int    `json:"ratingid"`
 	AnswerID  string `json:"answerid"`
 	AnsRating int    `json:"answerrating"`
 }
@@ -62,10 +62,8 @@ func GetComments(db *sql.DB, AnswerID string) answercomments {
 }
 
 func EditComment(db *sql.DB, comment answercomments) bool {
-	if comment.CommentID == "" {
-		return false
-	}
-	query := fmt.Sprintf()
+	query := fmt.Sprintf("Update AnswerComments SET Comments = '%s' WHERE ID = '%d' ",
+		comment.Comment, comment.CommentID)
 	_, err := db.Query(query)
 
 	if err != nil {
@@ -148,29 +146,18 @@ func comments(w http.ResponseWriter, r *http.Request) {
 
 			if err == nil {
 				json.Unmarshal(reqBody, &comment)
-
-				if comment.CommentID == "" {
-					w.WriteHeader(
-						http.StatusUnprocessableEntity)
-					w.Write([]byte(
-						"422 - Please supply Comment " +
-							" information " +
-							"in JSON format"))
-					return
-				} else {
-					//To update comment details
-					EditComment(db, comment)
-					w.WriteHeader(http.StatusCreated)
-					w.Write([]byte("comment updated successfully"))
-					return
-				}
+				//To update comment details
+				EditComment(db, comment)
+				w.WriteHeader(http.StatusCreated)
+				w.Write([]byte("comment updated successfully"))
+				return
 			}
 		}
 	}
 }
 
 func GetRating(db *sql.DB, AnswerID string) answerratings {
-	query := fmt.Sprintf("Select * FROM AnswerRatings WHERE AnswerID= '%s'", AnswerID)
+	query := fmt.Sprintf("Select * FROM AnswerRatings WHERE AnswerID = '%s'", AnswerID)
 	results, err := db.Query(query)
 	if err != nil {
 		panic(err.Error())
@@ -193,8 +180,8 @@ func EditRatings(db *sql.DB, ratings answerratings) bool {
 	if ratings.AnswerID == "" {
 		return false
 	}
-	query := fmt.Sprintf("UPDATE AnswerRatings SET Rating = '%d' WHERE ID = '%s';",
-		ratings.AnsRating, ratings.RatingID)
+	query := fmt.Sprintf("UPDATE AnswerRatings SET Rating = '%d' WHERE AnswerID = '%s';",
+		ratings.AnsRating, ratings.AnswerID)
 	_, err := db.Query(query)
 
 	if err != nil {
@@ -219,7 +206,7 @@ func IncreaseAnswerRatings(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	//GET is for getting passenger trips
+	//PUT is for getting increasing rating
 	if r.Method == "PUT" {
 		var rating answerratings
 		reqBody, err := ioutil.ReadAll(r.Body)
@@ -227,21 +214,11 @@ func IncreaseAnswerRatings(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			json.Unmarshal(reqBody, &rating)
 
-			if rating.RatingID == "" {
-				w.WriteHeader(
-					http.StatusUnprocessableEntity)
-				w.Write([]byte(
-					"422 - Please supply Comment " +
-						" information " +
-						"in JSON format"))
-				return
-			} else {
-				//To update comment details
-				IncreaseRatings(db, rating)
-				w.WriteHeader(http.StatusCreated)
-				w.Write([]byte("comment updated successfully"))
-				return
-			}
+			//To update rating
+			IncreaseRatings(db, rating)
+			w.WriteHeader(http.StatusCreated)
+			w.Write([]byte("comment updated successfully"))
+			return
 		}
 	}
 }
@@ -266,7 +243,7 @@ func DecreaseAnswerRatings(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	//GET is for getting passenger trips
+	//PUT is for decreasing rating
 	if r.Method == "PUT" {
 		var rating answerratings
 		reqBody, err := ioutil.ReadAll(r.Body)
@@ -274,25 +251,15 @@ func DecreaseAnswerRatings(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			json.Unmarshal(reqBody, &rating)
 
-			if rating.RatingID == "" {
-				w.WriteHeader(
-					http.StatusUnprocessableEntity)
-				w.Write([]byte(
-					"422 - Please supply Comment " +
-						" information " +
-						"in JSON format"))
-				return
-			} else {
-				//To update comment details
-				DecreaseRatings(db, rating)
-				w.WriteHeader(http.StatusCreated)
-				w.Write([]byte("comment updated successfully"))
-				return
-			}
+			//To update rating
+			DecreaseRatings(db, rating)
+			w.WriteHeader(http.StatusCreated)
+			w.Write([]byte("comment updated successfully"))
+			return
 		}
 	}
 }
-func getRatingByID(db *sql.DB, AnswerID string) int { //Gets the id of answer
+func getRatingByID(db *sql.DB, AnswerID string) int {
 	query := fmt.Sprintf("SELECT Rating FROM AnswerRatings WHERE AnswerID= '%s'", AnswerID)
 	results, err := db.Query(query) //Run Query
 	var ID int
