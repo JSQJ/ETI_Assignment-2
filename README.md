@@ -27,12 +27,13 @@ The answers comment and ratings microservice contains the following features:
    * View all answers with Comments / Ratings
    
 DockerHub images link
-  *https://hub.docker.com/repository/docker/jsqj/question_repo
-  *https://hub.docker.com/repository/docker/jsqj/answer_repo
+   * https://hub.docker.com/repository/docker/jsqj/question_repo
+   * https://hub.docker.com/repository/docker/jsqj/answer_repo
   
-
 Prerequisites
-  *Please ensure that GOLANG and MYSQL is installed on your system, and is fully operational
-  *Please do also ensure that your SQL user login is as such:
-  Username: root
-  Password: 12N28c02
+   * Please ensure that GOLANG and MYSQL is installed on your system, and is fully operational
+   * Please do also ensure that your SQL user login is as such:
+   * Username: root
+   * Password: 12N28c02
+  
+  
