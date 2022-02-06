@@ -35,5 +35,12 @@ Prerequisites
    * Please do also ensure that your SQL user login is as such:
    * Username: root
    * Password: 12N28c02
-  
-  
+
+<h2><b>Set Up</b></h2>
+1. Clone the Repo
+2. Install necessary Libraries:
+   * go get -u github.com/go-sql-driver/mysql
+   * go get -u github.com/gorilla/mux
+   * go get -u github.com/gorilla/handlers
+3. Run SQL script
+
