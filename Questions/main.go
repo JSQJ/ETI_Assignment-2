@@ -13,6 +13,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type question struct {
+	QuestionID int    `json:"questionid"`
+	Title      string `json:"title"`
+	Content    string `json:"content"`
+	Module     string `json:"module"`
+}
 type questioncomments struct {
 	CommentID  int    `json:"commentid"`
 	QuestionID string `json:"questionid"`
@@ -75,7 +81,7 @@ func EditComment(db *sql.DB, comment questioncomments) bool {
 }
 
 func CreateComments(db *sql.DB, Comment questioncomments) bool {
-	query := fmt.Sprintf("INSERT INTO AnswerRatings(QuestionID, Comments, StudentID) VALUES ('%s', '%s', '%s')",
+	query := fmt.Sprintf("INSERT INTO QuestionComments(QuestionID, Comments, StudentID) VALUES ('%s', '%s', '%s')",
 		Comment.QuestionID,
 		Comment.Comment,
 		Comment.StudentID)
@@ -183,7 +189,7 @@ func EditRatings(db *sql.DB, ratings questionratings) bool {
 	if ratings.QuestionID == "" {
 		return false
 	}
-	query := fmt.Sprintf("UPDATE AnswerRatings SET Rating = '%d' WHERE QuestionID = '%s';",
+	query := fmt.Sprintf("UPDATE QuestionRatings SET Rating = '%d' WHERE QuestionID = '%s';",
 		ratings.QuestionRating, ratings.QuestionID)
 	_, err := db.Query(query)
 
@@ -332,28 +338,27 @@ func ratings(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
-func GetAnswersWithComments(db *sql.DB, AnswerID string) answercomments {
-	query := fmt.Sprintf("Select * FROM AnswerComments WHERE AnswerID= '%s' AND COUNT(", AnswerID)
+func GetQuestionsWithComments(db *sql.DB) question {
+	query := "Select Questions.*  FROM QuestionComments INNER JOIN Questions ON QuestionComments.QuestionID = Questions.ID GROUP BY QuestionComments.QuestionID"
+
 	results, err := db.Query(query)
 	if err != nil {
 		panic(err.Error())
 	}
-	var comments answercomments
+	var questions question
 	for results.Next() {
 		// map this type to the record in the table
-		err = results.Scan(&comments.CommentID, &comments.AnswerID,
-			&comments.Comment, &comments.StudentID)
+		err = results.Scan(&questions.QuestionID, &questions.Title,
+			&questions.Content, &questions.Module)
 		if err != nil {
 			panic(err.Error())
 		}
 	}
-	fmt.Println(&comments.CommentID, &comments.AnswerID,
-		&comments.Comment, &comments.StudentID)
-	return comments
+
+	return questions
 }
 
-func getCommentedAnswers(w http.ResponseWriter, r *http.Request) {
+func getCommentedQuestions(w http.ResponseWriter, r *http.Request) {
 	if !validKey(r) {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("401 - Invalid key"))
@@ -363,50 +368,55 @@ func getCommentedAnswers(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	params := mux.Vars(r)
 	//GET is for getting comments
 	if r.Method == "GET" {
 		//GET comments using answerid
-		Comment := GetComments(db, params["AnswerID"])
-		if err != nil {
-			fmt.Printf("There was an error encoding the json. err = %s", err)
-		} else {
-			json.NewEncoder(w).Encode(GetComments(db, Comment.AnswerID))
-			w.WriteHeader(http.StatusAccepted)
-			return
-		}
+		json.NewEncoder(w).Encode(GetQuestionsWithComments(db))
+		w.WriteHeader(http.StatusAccepted)
+		return
 	}
 }
-func getAllRatedAnswers(db *sql.DB) answerratings{
-	query := fmt.Sprintf("Select * FROM Answers INNER JOIN AnswerRatings ON Answers.ID = AnswerRatings.AnswerID WHERE AnswerID= '%s' AND COUNT(")
+
+func getAllRatedQuestion(db *sql.DB) question {
+	query := "Select Questions.*  FROM QuestionRatings INNER JOIN Questions ON QuestionRatings.QuestionID = Questions.ID WHERE QuestionRatings.Rating > 0"
 	results, err := db.Query(query)
 	if err != nil {
 		panic(err.Error())
 	}
-	var comments answercomments
+	var questions question
 	for results.Next() {
 		// map this type to the record in the table
-		err = results.Scan(&comments.CommentID, &comments.AnswerID,
-			&comments.Comment, &comments.StudentID)
+		err = results.Scan(&questions.QuestionID, &questions.Title,
+			&questions.Content, &questions.Module)
 		if err != nil {
 			panic(err.Error())
 		}
 	}
-	fmt.Println(&comments.CommentID, &comments.AnswerID,
-		&comments.Comment, &comments.StudentID)
-	return comments
+	/*
+		fmt.Println(&comments.CommentID, &comments.AnswerID,
+			&comments.Comment, &comments.StudentID)*/
+	return questions
 }
-func getRatedAnswers(w http.ResponseWriter, r *http.Request) {
+
+func getRatedQuestion(w http.ResponseWriter, r *http.Request) {
+	if !validKey(r) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("401 - Invalid key"))
+		return
+	}
+	db, err := sql.Open("mysql", "root:12N28c02@tcp(127.0.0.1:3306)/assignment2_db") //connect to database
+	if err != nil {
+		fmt.Println(err)
+	}
 	//GET is for getting passenger trips
 	if r.Method == "GET" {
-		params := mux.Vars(r)
-		passengerID := params["passengerid"]
-		var passengerTrips []Trip = getTrips(passengerID)
-		json.NewEncoder(w).Encode(passengerTrips)
-		fmt.Println(passengerTrips)
+		//GET comments using answerid
+		json.NewEncoder(w).Encode(getAllRatedQuestion(db))
+		w.WriteHeader(http.StatusAccepted)
+		return
 	}
 }
-*/
+
 func main() {
 	//API part
 	router := mux.NewRouter()
@@ -419,6 +429,8 @@ func main() {
 	router.HandleFunc("/api/v1/Question/Ratings/{QuestionID}", ratings).Methods("Get", "PUT")
 	router.HandleFunc("/api/v1/Question/Ratings/Increase", IncreaseAnswerRatings).Methods("PUT")
 	router.HandleFunc("/api/v1/Question/Ratings/Decrease", DecreaseAnswerRatings).Methods("PUT")
+	router.HandleFunc("/api/v1/CommentedQuestion", getCommentedQuestions).Methods("GET")
+	router.HandleFunc("/api/v1/RatedQuestion", getRatedQuestion).Methods("GET")
 	fmt.Println("Listening at port 9083")
 	log.Fatal(http.ListenAndServe(":9083", handlers.CORS(headers, methods, origins)(router)))
 }

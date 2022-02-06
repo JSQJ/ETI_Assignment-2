@@ -13,6 +13,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type answer struct {
+	AnswerID   string `json:"answerid"`
+	QuestionID string `json:"questionid"`
+	Content    string `json:"content"`
+}
+
 type answercomments struct {
 	CommentID int    `json:"commentid"`
 	AnswerID  string `json:"answerid"`
@@ -56,8 +62,6 @@ func GetComments(db *sql.DB, AnswerID string) answercomments {
 			panic(err.Error())
 		}
 	}
-	//fmt.Println(&comments.CommentID, &comments.AnswerID,
-	//&comments.Comment, &comments.StudentID)
 	return comments
 }
 
@@ -171,8 +175,6 @@ func GetRating(db *sql.DB, AnswerID string) answerratings {
 			panic(err.Error())
 		}
 	}
-	//fmt.Println(&ratings.RatingID, &ratings.AnswerID,
-	//&ratings.AnsRating)
 	return ratings
 }
 
@@ -329,25 +331,24 @@ func ratings(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
-func GetAnswersWithComments(db *sql.DB, AnswerID string) answercomments {
-	query := fmt.Sprintf("Select * FROM AnswerComments WHERE AnswerID= '%s' AND COUNT(", AnswerID)
+func GetAnswersWithComments(db *sql.DB) answer {
+	query := "Select Answers.*  FROM AnswerComments INNER JOIN Answers ON AnswerComments.AnswerID = Answers.ID GROUP BY AnswerComments.AnswerID"
+
 	results, err := db.Query(query)
 	if err != nil {
 		panic(err.Error())
 	}
-	var comments answercomments
+	var answers answer
 	for results.Next() {
 		// map this type to the record in the table
-		err = results.Scan(&comments.CommentID, &comments.AnswerID,
-			&comments.Comment, &comments.StudentID)
+		err = results.Scan(&answers.AnswerID, &answers.QuestionID,
+			&answers.Content)
 		if err != nil {
 			panic(err.Error())
 		}
 	}
-	fmt.Println(&comments.CommentID, &comments.AnswerID,
-		&comments.Comment, &comments.StudentID)
-	return comments
+
+	return answers
 }
 
 func getCommentedAnswers(w http.ResponseWriter, r *http.Request) {
@@ -360,50 +361,52 @@ func getCommentedAnswers(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	params := mux.Vars(r)
 	//GET is for getting comments
 	if r.Method == "GET" {
-		//GET comments using answerid
-		Comment := GetComments(db, params["AnswerID"])
-		if err != nil {
-			fmt.Printf("There was an error encoding the json. err = %s", err)
-		} else {
-			json.NewEncoder(w).Encode(GetComments(db, Comment.AnswerID))
-			w.WriteHeader(http.StatusAccepted)
-			return
-		}
+		//GET commented questions
+		json.NewEncoder(w).Encode(GetAnswersWithComments(db))
+		w.WriteHeader(http.StatusAccepted)
+		return
 	}
 }
-func getAllRatedAnswers(db *sql.DB) answerratings{
-	query := fmt.Sprintf("Select * FROM Answers INNER JOIN AnswerRatings ON Answers.ID = AnswerRatings.AnswerID WHERE AnswerID= '%s' AND COUNT(")
+
+func getAllRatedAnswers(db *sql.DB) answer {
+	query := "Select Answers.*  FROM AnswerRatings INNER JOIN Answers ON AnswerRatings.AnswerID = Answers.ID WHERE AnswerRatings.Rating > 0"
 	results, err := db.Query(query)
 	if err != nil {
 		panic(err.Error())
 	}
-	var comments answercomments
+	var answers answer
 	for results.Next() {
 		// map this type to the record in the table
-		err = results.Scan(&comments.CommentID, &comments.AnswerID,
-			&comments.Comment, &comments.StudentID)
+		err = results.Scan(&answers.AnswerID, &answers.QuestionID,
+			&answers.Content)
 		if err != nil {
 			panic(err.Error())
 		}
 	}
-	fmt.Println(&comments.CommentID, &comments.AnswerID,
-		&comments.Comment, &comments.StudentID)
-	return comments
+	return answers
 }
+
 func getRatedAnswers(w http.ResponseWriter, r *http.Request) {
+	if !validKey(r) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("401 - Invalid key"))
+		return
+	}
+	db, err := sql.Open("mysql", "root:12N28c02@tcp(127.0.0.1:3306)/assignment2_db") //connect to database
+	if err != nil {
+		fmt.Println(err)
+	}
 	//GET is for getting passenger trips
 	if r.Method == "GET" {
-		params := mux.Vars(r)
-		passengerID := params["passengerid"]
-		var passengerTrips []Trip = getTrips(passengerID)
-		json.NewEncoder(w).Encode(passengerTrips)
-		fmt.Println(passengerTrips)
+		//GET rated questions
+		json.NewEncoder(w).Encode(getAllRatedAnswers(db))
+		w.WriteHeader(http.StatusAccepted)
+		return
 	}
 }
-*/
+
 func main() {
 	//API part
 	router := mux.NewRouter()
@@ -416,6 +419,8 @@ func main() {
 	router.HandleFunc("/api/v1/Answer/Ratings/{AnswerID}", ratings).Methods("Get", "PUT")
 	router.HandleFunc("/api/v1/Answer/Ratings/Increase", IncreaseAnswerRatings).Methods("PUT")
 	router.HandleFunc("/api/v1/Answer/Ratings/Decrease", DecreaseAnswerRatings).Methods("PUT")
+	router.HandleFunc("/api/v1/CommentedAnswers", getCommentedAnswers).Methods("GET")
+	router.HandleFunc("/api/v1/RatedAnswers", getRatedAnswers).Methods("GET")
 	fmt.Println("Listening at port 9082")
 	log.Fatal(http.ListenAndServe(":9082", handlers.CORS(headers, methods, origins)(router)))
 }
