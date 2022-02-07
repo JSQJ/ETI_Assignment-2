@@ -192,8 +192,8 @@ func EditRatings(db *sql.DB, ratings answerratings) bool {
 	return true
 }
 
-func IncreaseRatings(db *sql.DB, ratings answerratings) bool {
-	AnswerID := ratings.AnswerID
+func IncreaseRatings(db *sql.DB, AnswerID string /*ratings answerratings*/) bool {
+	//AnswerID := ratings.AnswerID
 	Rating := (getRatingByID(db, AnswerID) + 1)
 	query := fmt.Sprintf("Update AnswerRatings SET Rating = '%d'", Rating)
 	_, err := db.Query(query)
@@ -208,6 +208,7 @@ func IncreaseAnswerRatings(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	params := mux.Vars(r)
 	//PUT is for getting increasing rating
 	if r.Method == "PUT" {
 		var rating answerratings
@@ -217,15 +218,15 @@ func IncreaseAnswerRatings(w http.ResponseWriter, r *http.Request) {
 			json.Unmarshal(reqBody, &rating)
 
 			//To update rating
-			IncreaseRatings(db, rating)
+			IncreaseRatings(db, params["AnswerID"])
 			w.WriteHeader(http.StatusCreated)
-			w.Write([]byte("comment updated successfully"))
+			w.Write([]byte("rating updated successfully"))
 			return
 		}
 	}
 }
-func DecreaseRatings(db *sql.DB, ratings answerratings) bool {
-	AnswerID := ratings.AnswerID
+func DecreaseRatings(db *sql.DB, AnswerID string /*ratings answerratings*/) bool {
+	///AnswerID := ratings.AnswerID
 	Rating := (getRatingByID(db, AnswerID) - 1)
 	query := fmt.Sprintf("Update AnswerRatings SET Rating = '%d'", Rating)
 	_, err := db.Query(query)
@@ -245,6 +246,7 @@ func DecreaseAnswerRatings(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	params := mux.Vars(r)
 	//PUT is for decreasing rating
 	if r.Method == "PUT" {
 		var rating answerratings
@@ -254,9 +256,9 @@ func DecreaseAnswerRatings(w http.ResponseWriter, r *http.Request) {
 			json.Unmarshal(reqBody, &rating)
 
 			//To update rating
-			DecreaseRatings(db, rating)
+			DecreaseRatings(db, params["AnswerID"])
 			w.WriteHeader(http.StatusCreated)
-			w.Write([]byte("comment updated successfully"))
+			w.Write([]byte("rating updated successfully"))
 			return
 		}
 	}
@@ -293,7 +295,7 @@ func ratings(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			fmt.Printf("There was an error encoding the json. err = %s", err)
 		} else {
-			json.NewEncoder(w).Encode(GetComments(db, Rating.AnswerID))
+			json.NewEncoder(w).Encode(GetRating(db, Rating.AnswerID))
 			w.WriteHeader(http.StatusAccepted)
 			return
 		}
@@ -322,7 +324,7 @@ func ratings(w http.ResponseWriter, r *http.Request) {
 				} else {
 					EditRatings(db, rating)
 					w.WriteHeader(http.StatusCreated)
-					w.Write([]byte("comment updated successfully"))
+					w.Write([]byte("rating updated successfully"))
 					return
 				}
 			}
@@ -417,8 +419,8 @@ func main() {
 	router.HandleFunc("/api/v1/Answer", home)                                                       //Test API
 	router.HandleFunc("/api/v1/Answer/Comments/{AnswerID}", comments).Methods("GET", "PUT", "POST") //API Manipulation
 	router.HandleFunc("/api/v1/Answer/Ratings/{AnswerID}", ratings).Methods("Get", "PUT")
-	router.HandleFunc("/api/v1/Answer/Ratings/Increase", IncreaseAnswerRatings).Methods("PUT")
-	router.HandleFunc("/api/v1/Answer/Ratings/Decrease", DecreaseAnswerRatings).Methods("PUT")
+	router.HandleFunc("/api/v1/Answer/Ratings/Increase/{AnswerID}", IncreaseAnswerRatings).Methods("PUT")
+	router.HandleFunc("/api/v1/Answer/Ratings/Decrease/{AnswerID}", DecreaseAnswerRatings).Methods("PUT")
 	router.HandleFunc("/api/v1/CommentedAnswers", getCommentedAnswers).Methods("GET")
 	router.HandleFunc("/api/v1/RatedAnswers", getRatedAnswers).Methods("GET")
 	fmt.Println("Listening at port 9082")
